@@ -39,8 +39,9 @@ class BowedStringVoice : public juce::SynthesiserVoice
 
   private:
     dsp::BowedString bowedString_;
-    dsp::BowTable bowTable_;
     bool noteOn_ = false;
 
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> velocity_;
+    float next_freq_ = 0.f;
+
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> force_;
 };

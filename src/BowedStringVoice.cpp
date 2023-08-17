@@ -2,7 +2,7 @@
 
 #include <dsp_base.h>
 
-constexpr float PITCH_BEND_RANGE = 2.0f;
+constexpr float PITCH_BEND_RANGE = 48.0f;
 constexpr float MAX_PITCH_BEND_VALUE = 16383.0f;
 constexpr float CENTER_PITCH_BEND_VALUE = 8192.0f;
 
@@ -21,7 +21,10 @@ void BowedStringVoice::setCurrentPlaybackSampleRate(double newRate)
 
     // TODO: BowedString should probably support changing the sample rate during runtime.
     if (newRate > 0)
+    {
         bowedString_.Init(static_cast<float>(newRate));
+        next_freq_ = bowedString_.GetFrequency();
+    }
 }
 
 void BowedStringVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* /* sound */,
@@ -32,17 +35,15 @@ void BowedStringVoice::startNote(int midiNoteNumber, float velocity, juce::Synth
     normalizePitchWheelValue *= PITCH_BEND_RANGE;
 
     float freq = dsp::MidiToFreq(static_cast<float>(midiNoteNumber) + normalizePitchWheelValue);
-
+    next_freq_ = freq;
     bowedString_.SetFrequency(freq);
     bowedString_.SetLastMidiNote(static_cast<float>(midiNoteNumber));
     bowedString_.SetVelocity(0.f);
-    bowTable_.SetForce(3.f);
+    bowedString_.SetForce(0.f);
 
-    velocity = 0.03f + (0.2f * velocity);
-
-    velocity_.reset(getSampleRate(), .1f);
-    velocity_.setCurrentAndTargetValue(0.f);
-    velocity_.setTargetValue(velocity);
+    force_.reset(getSampleRate(), 0.2f);
+    force_.setCurrentAndTargetValue(0.f);
+    force_.setTargetValue(velocity);
     noteOn_ = true;
 }
 
@@ -58,7 +59,8 @@ void BowedStringVoice::pitchWheelMoved(int newPitchWheelValue)
     normalizePitchWheelValue *= PITCH_BEND_RANGE;
 
     float freq = dsp::MidiToFreq(static_cast<float>(getCurrentlyPlayingNote()) + normalizePitchWheelValue);
-    bowedString_.SetFrequency(freq);
+    next_freq_ = freq;
+    // bowedString_.SetFrequency(freq);
 }
 
 void BowedStringVoice::controllerMoved(int /* controllerNumber */, int /* newControllerValue */)
@@ -70,24 +72,26 @@ void BowedStringVoice::aftertouchChanged(int newAftertouchValue)
     float normalizedAftertouchValue = static_cast<float>(newAftertouchValue) / 127.0f;
     normalizedAftertouchValue *= 5.f;
 
-    bowTable_.SetForce(normalizedAftertouchValue);
+    bowedString_.SetForce(normalizedAftertouchValue);
 }
 
 void BowedStringVoice::channelPressureChanged(int newChannelPressureValue)
 {
     float normalizedAftertouchValue = static_cast<float>(newChannelPressureValue) / 127.0f;
-    normalizedAftertouchValue *= 4.f;
 
-    bowTable_.SetForce(5.f - normalizedAftertouchValue);
+    bowedString_.SetVelocity(normalizedAftertouchValue);
 }
 
 void BowedStringVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
+    float current_freq = bowedString_.GetFrequency();
+    float freq_diff = next_freq_ - current_freq;
+    float freq_dt = freq_diff / static_cast<float>(numSamples);
     while (--numSamples >= 0)
     {
-        bowedString_.SetVelocity(velocity_.getNextValue());
-        dsp::ExcitationModel* excitation = (noteOn_) ? &bowTable_ : nullptr;
-        float currentSample = bowedString_.Tick(excitation);
+        bowedString_.SetFrequency(current_freq += freq_dt);
+        bowedString_.SetForce(force_.getNextValue());
+        float currentSample = bowedString_.Tick(noteOn_);
 
         for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
             outputBuffer.addSample(i, startSample, currentSample);

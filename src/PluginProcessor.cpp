@@ -14,7 +14,7 @@ BowedVstPluginAudioProcessor::BowedVstPluginAudioProcessor()
 #endif
       )
 {
-    constexpr auto NUM_VOICE = 8;
+    constexpr auto NUM_VOICE = 2;
     for (auto i = 0; i < NUM_VOICE; ++i)
     {
         synth_.addVoice(new BowedStringVoice());

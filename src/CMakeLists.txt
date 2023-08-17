@@ -40,7 +40,7 @@ juce_add_plugin(
   NEEDS_MIDI_OUTPUT FALSE
   IS_MIDI_EFFECT FALSE
   # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard focus?
-  COPY_PLUGIN_AFTER_BUILD TRUE        # Should the plugin be installed to a default location after building?
+  COPY_PLUGIN_AFTER_BUILD FALSE        # Should the plugin be installed to a default location after building?
   PLUGIN_MANUFACTURER_CODE Alex
   PLUGIN_CODE Dem0
   FORMATS AU VST3 Standalone
