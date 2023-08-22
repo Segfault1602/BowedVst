@@ -6,13 +6,31 @@ constexpr float PITCH_BEND_RANGE = 48.0f;
 constexpr float MAX_PITCH_BEND_VALUE = 16383.0f;
 constexpr float CENTER_PITCH_BEND_VALUE = 8192.0f;
 
-BowedStringVoice::BowedStringVoice()
+BowedStringVoice::BowedStringVoice(uint8_t midi_channel) : midi_channel_(midi_channel)
 {
+    // One midi channel per string. Channel 1 to 4 correspond to the bottom 4 rows on the Linnstrument.
+    switch (midi_channel)
+    {
+    case 1: // G
+        break;
+    case 2: // D
+        break;
+    case 3: // A
+        break;
+    case 4: // E
+        break;
+    default: // TODO: handle arbitrary amount of strings tuned in fifth?
+        break;
+    }
 }
 
 bool BowedStringVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
-    return dynamic_cast<BowedStringSound*>(sound) != nullptr;
+    if (dynamic_cast<BowedStringSound*>(sound) == nullptr)
+        return false;
+
+    BowedStringSound* stringSound = dynamic_cast<BowedStringSound*>(sound);
+    return stringSound->getMidiChannel() == midi_channel_;
 }
 
 void BowedStringVoice::setCurrentPlaybackSampleRate(double newRate)

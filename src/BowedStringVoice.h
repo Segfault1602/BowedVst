@@ -6,7 +6,7 @@
 
 struct BowedStringSound : public juce::SynthesiserSound
 {
-    BowedStringSound()
+    BowedStringSound(uint8_t midi_channel) : midi_channel_(midi_channel)
     {
     }
 
@@ -14,16 +14,24 @@ struct BowedStringSound : public juce::SynthesiserSound
     {
         return true;
     }
-    bool appliesToChannel(int) override
+    bool appliesToChannel(int channel) override
     {
-        return true;
+        return channel == midi_channel_;
     }
+
+    uint8_t getMidiChannel() const
+    {
+        return midi_channel_;
+    }
+
+  private:
+    const uint8_t midi_channel_ = 0;
 };
 
 class BowedStringVoice : public juce::SynthesiserVoice
 {
   public:
-    BowedStringVoice();
+    BowedStringVoice(uint8_t midi_channel);
 
     bool canPlaySound(juce::SynthesiserSound* sound) override;
     void setCurrentPlaybackSampleRate(double newRate) override;
@@ -38,6 +46,7 @@ class BowedStringVoice : public juce::SynthesiserVoice
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
   private:
+    uint8_t midi_channel_ = 0;
     dsp::BowedString bowedString_;
     bool noteOn_ = false;
 

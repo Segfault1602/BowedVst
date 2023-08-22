@@ -14,13 +14,12 @@ BowedVstPluginAudioProcessor::BowedVstPluginAudioProcessor()
 #endif
       )
 {
-    constexpr auto NUM_VOICE = 2;
-    for (auto i = 0; i < NUM_VOICE; ++i)
+    constexpr uint8_t NUM_VOICE = 4;
+    for (uint8_t i = 1; i <= NUM_VOICE; ++i)
     {
-        synth_.addVoice(new BowedStringVoice());
+        synth_.addVoice(new BowedStringVoice(i));
+        synth_.addSound(new BowedStringSound(i));
     }
-
-    synth_.addSound(new BowedStringSound());
 }
 
 BowedVstPluginAudioProcessor::~BowedVstPluginAudioProcessor()
