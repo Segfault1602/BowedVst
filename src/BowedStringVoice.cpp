@@ -58,11 +58,12 @@ void BowedStringVoice::startNote(int midiNoteNumber, float velocity, juce::Synth
     bowedString_.SetLastMidiNote(static_cast<float>(midiNoteNumber));
     bowedString_.SetVelocity(0.f);
     bowedString_.SetForce(0.f);
+    bowedString_.Pluck();
 
     force_.reset(getSampleRate(), 0.2f);
     force_.setCurrentAndTargetValue(0.f);
     force_.setTargetValue(velocity);
-    noteOn_ = true;
+    noteOn_ = false;
 }
 
 void BowedStringVoice::stopNote(float /* velocity */, bool /* allowTailOff */)
