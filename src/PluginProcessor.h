@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "StringEnsembleEngine.h"
+
 //==============================================================================
 class BowedVstPluginAudioProcessor : public juce::AudioProcessor
 {
@@ -46,7 +48,8 @@ class BowedVstPluginAudioProcessor : public juce::AudioProcessor
     juce::MidiKeyboardState keyboardState_;
     juce::Synthesiser synth_;
     juce::MidiMessageCollector midiCollector_;
-    // SynthAudioSource synthAudioSource_;
+
+    StringEnsembleEngine stringEnsembleEngine_;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BowedVstPluginAudioProcessor)
 };

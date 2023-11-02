@@ -55,20 +55,19 @@ void BowedStringVoice::startNote(int midiNoteNumber, float velocity, juce::Synth
     float freq = dsp::MidiToFreq(static_cast<float>(midiNoteNumber) + normalizePitchWheelValue);
     next_freq_ = freq;
     bowedString_.SetFrequency(freq);
-    bowedString_.SetLastMidiNote(static_cast<float>(midiNoteNumber));
     bowedString_.SetVelocity(0.f);
     bowedString_.SetForce(0.f);
-    bowedString_.Pluck();
 
     force_.reset(getSampleRate(), 0.2f);
     force_.setCurrentAndTargetValue(0.f);
     force_.setTargetValue(velocity);
-    noteOn_ = false;
+    noteOn_ = true;
 }
 
 void BowedStringVoice::stopNote(float /* velocity */, bool /* allowTailOff */)
 {
     noteOn_ = false;
+    bowedString_.SetVelocity(0.f);
 }
 
 void BowedStringVoice::pitchWheelMoved(int newPitchWheelValue)
@@ -98,7 +97,8 @@ void BowedStringVoice::channelPressureChanged(int newChannelPressureValue)
 {
     float normalizedAftertouchValue = static_cast<float>(newChannelPressureValue) / 127.0f;
 
-    bowedString_.SetVelocity(normalizedAftertouchValue);
+    if (noteOn_)
+        bowedString_.SetVelocity(normalizedAftertouchValue);
 }
 
 void BowedStringVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
@@ -110,7 +110,7 @@ void BowedStringVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, i
     {
         bowedString_.SetFrequency(current_freq += freq_dt);
         bowedString_.SetForce(force_.getNextValue());
-        float currentSample = bowedString_.Tick(noteOn_);
+        float currentSample = bowedString_.Tick(true);
 
         for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
             outputBuffer.addSample(i, startSample, currentSample);

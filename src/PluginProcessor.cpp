@@ -94,6 +94,7 @@ void BowedVstPluginAudioProcessor::changeProgramName(int index, const juce::Stri
 //==============================================================================
 void BowedVstPluginAudioProcessor::prepareToPlay(double sampleRate, int /* samplesPerBlock */)
 {
+    stringEnsembleEngine_.Init(static_cast<float>(sampleRate));
     synth_.setCurrentPlaybackSampleRate(sampleRate);
     midiCollector_.reset(sampleRate);
 }
@@ -126,7 +127,45 @@ void BowedVstPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    synth_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    int currentSampleIdx = 0;
+    int numSamples = buffer.getNumSamples();
+
+    auto midiIterator = midiMessages.findNextSamplePosition(currentSampleIdx);
+
+    for (; numSamples > 0; ++midiIterator)
+    {
+        if (midiIterator == midiMessages.cend())
+        {
+            // no more midi events
+            stringEnsembleEngine_.Tick(buffer, currentSampleIdx, numSamples);
+            break;
+        }
+
+        const auto metadata = *midiIterator;
+        const int samplesToNextMidiMessage = metadata.samplePosition - currentSampleIdx;
+
+        if (samplesToNextMidiMessage >= numSamples)
+        {
+            // no more midi events in this block
+            stringEnsembleEngine_.Tick(buffer, currentSampleIdx, samplesToNextMidiMessage);
+            stringEnsembleEngine_.HandleMidiMessage(metadata.getMessage());
+            break;
+        }
+
+        if (samplesToNextMidiMessage < 1)
+        {
+            stringEnsembleEngine_.HandleMidiMessage(metadata.getMessage());
+            continue;
+        }
+
+        stringEnsembleEngine_.Tick(buffer, currentSampleIdx, samplesToNextMidiMessage);
+
+        stringEnsembleEngine_.HandleMidiMessage(metadata.getMessage());
+        currentSampleIdx += samplesToNextMidiMessage;
+        numSamples -= samplesToNextMidiMessage;
+    }
+
+    // synth_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
     // midiCollector_.removeNextBlockOfMessages(midiMessages, buffer.get.numSamples);
 
