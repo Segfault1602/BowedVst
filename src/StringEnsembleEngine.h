@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include <array>
+
 #include <string_ensemble.h>
 
 class StringEnsembleEngine
@@ -16,4 +18,6 @@ class StringEnsembleEngine
 
   private:
     dsp::StringEnsemble stringEnsemble_;
+
+    std::array<uint8_t, dsp::kStringCount> lastNote_{};
 };
