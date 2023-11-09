@@ -23,7 +23,7 @@ void BowedVstPluginAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colours::white);
     g.setFont(15.0f);
 
-    g.drawFittedText("ModLine", getLocalBounds(), juce::Justification::centredTop, 1);
+    g.drawFittedText("StringEnsemble", getLocalBounds(), juce::Justification::centredTop, 1);
 }
 
 void BowedVstPluginAudioProcessorEditor::resized()

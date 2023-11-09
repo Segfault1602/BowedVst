@@ -4,19 +4,62 @@ constexpr float PITCH_BEND_RANGE = 48.0f;
 constexpr float MAX_PITCH_BEND_VALUE = 16383.0f;
 constexpr float CENTER_PITCH_BEND_VALUE = 8192.0f;
 
-StringEnsembleEngine::StringEnsembleEngine()
+namespace ParamIDs
 {
+static juce::String paramVelocity{"velocity"};
+static juce::String paramForce{"force"};
+} // namespace ParamIDs
+
+void StringEnsembleEngine::AddBowParameters(juce::AudioProcessorValueTreeState::ParameterLayout& layout)
+{
+    auto velocity = std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID(ParamIDs::paramVelocity, 1), "Velocity", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f);
+
+    auto force = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(ParamIDs::paramForce, 1), "Force",
+                                                             juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f);
+
+    auto group =
+        std::make_unique<juce::AudioProcessorParameterGroup>("bow", "Bow", "|", std::move(velocity), std::move(force));
+
+    layout.add(std::move(group));
+}
+
+StringEnsembleEngine::StringEnsembleEngine(juce::AudioProcessorValueTreeState& treeState) : treeState_(treeState)
+{
+    bowParams_ = dynamic_cast<juce::AudioParameterFloat*>(treeState_.getParameter(ParamIDs::paramVelocity));
 }
 
 void StringEnsembleEngine::Init(float samplerate)
 {
     stringEnsemble_.Init(samplerate);
+
+    for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
+    {
+        stringData_[i].frequency = stringEnsemble_.GetFrequency(i);
+        stringData_[i].pitchWheelValue = 0.f;
+        stringData_[i].forceFilter.SetDecayFilter(-60, 10, samplerate);
+        stringData_[i].velocityFilter.SetDecayFilter(-60, 10, samplerate);
+        stringData_[i].pitchFilter.SetDecayFilter(-60, 100, samplerate);
+    }
 }
 
 void StringEnsembleEngine::Tick(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
     while (--numSamples >= 0)
     {
+        for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
+        {
+            auto& s = stringData_[i];
+            float pitchBend = s.pitchFilter.Tick(s.pitchWheelValue);
+            float freq = sfdsp::MidiToFreq(static_cast<float>(s.lastNote) + pitchBend);
+            stringEnsemble_.SetFrequency(i, freq);
+
+            float vel = s.velocityFilter.Tick(s.velocityValue);
+            stringEnsemble_.SetVelocity(i, vel * maxVelocity_);
+
+            float force = s.forceFilter.Tick(s.forceValue);
+            stringEnsemble_.SetForce(i, force);
+        }
         float currentSample = stringEnsemble_.Tick();
 
         for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
@@ -36,26 +79,30 @@ void StringEnsembleEngine::HandleMidiMessage(const juce::MidiMessage& m)
         return;
     }
 
+    auto& stringData = stringData_[channel - 1];
+
     if (m.isNoteOn())
     {
-        // stringEnsemble_.SetForce(channel - 1, 0.5f);
-        // stringEnsemble_.SetVelocity(channel - 1, 0.5f);
-        const float freq = dsp::MidiToFreq(static_cast<float>(m.getNoteNumber()));
-        stringEnsemble_.SetFrequency(channel - 1, freq);
-        lastNote_[channel - 1] = static_cast<uint8_t>(m.getNoteNumber());
+        const float freq = sfdsp::MidiToFreq(static_cast<float>(m.getNoteNumber()));
+        stringData.frequency = freq;
+        stringData.pitchWheelValue = 0.f;
+        stringData.forceValue = maxForce_;
+        stringData.velocityValue = (static_cast<float>(m.getVelocity()) / 127.0f);
+        stringData.lastNote = static_cast<uint8_t>(m.getNoteNumber());
     }
     else if (m.isNoteOff())
     {
         stringEnsemble_.FingerOff(channel - 1);
-        // stringEnsemble_.SetForce(channel - 1, 0.0f);
-        // stringEnsemble_.SetVelocity(channel - 1, 0.0f);
+        stringData.forceValue = 0.0f;
+        stringData.velocityValue = 0.0f;
+        stringData.pitchWheelValue = 0.f;
     }
     else if (m.isAllNotesOff() || m.isAllSoundOff())
     {
-        for (uint8_t i = 0; i < dsp::kStringCount; ++i)
+        for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
         {
-            stringEnsemble_.SetForce(i - 1, 0.0f);
-            stringEnsemble_.SetVelocity(i - 1, 0.0f);
+            stringData_[i].forceValue = 0.0f;
+            stringData_[i].velocityValue = 0.0f;
         }
     }
     else if (m.isPitchWheel())
@@ -66,18 +113,23 @@ void StringEnsembleEngine::HandleMidiMessage(const juce::MidiMessage& m)
         normalizePitchWheelValue *= PITCH_BEND_RANGE;
 
         DBG("Ch: " << channel << "Value: " << wheelPos << ", Pitch Wheel: " << normalizePitchWheelValue);
-
-        float freq = dsp::MidiToFreq(static_cast<float>(lastNote_[channel - 1]) + normalizePitchWheelValue);
-        stringEnsemble_.SetFrequency(channel - 1, freq);
+        stringData.pitchWheelValue = normalizePitchWheelValue;
     }
     else if (m.isController())
     {
         uint8_t ccNum = static_cast<uint8_t>(m.getControllerNumber());
         float normalizedValue = static_cast<float>(m.getControllerValue()) / 127.0f;
-        if (ccNum >= 1 && ccNum <= 4)
+        if (ccNum == 1)
         {
-            stringEnsemble_.SetForce(ccNum - 1, normalizedValue);
-            stringEnsemble_.SetVelocity(ccNum - 1, normalizedValue);
+            maxVelocity_ = normalizedValue;
+        }
+        else if (ccNum == 2)
+        {
+            maxForce_ = normalizedValue;
+        }
+        else if (ccNum == 3)
+        {
+            stringEnsemble_.SetBridgeTransmission(normalizedValue);
         }
         else
         {

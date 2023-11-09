@@ -4,3 +4,6 @@
 [submodule "externals/JUCE"]
 	path = externals/JUCE
 	url = https://github.com/juce-framework/JUCE.git
+[submodule "externals/foleys_gui_magic"]
+	path = externals/foleys_gui_magic
+	url = https://github.com/ffAudio/foleys_gui_magic.git

@@ -1,25 +1,22 @@
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
 
 #include "BowedStringVoice.h"
 
+static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    StringEnsembleEngine::AddBowParameters(layout);
+    return layout;
+}
+
 //==============================================================================
 BowedVstPluginAudioProcessor::BowedVstPluginAudioProcessor()
-    : AudioProcessor(BusesProperties()
-#if !JucePlugin_IsMidiEffect
-#if !JucePlugin_IsSynth
-                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
-#endif
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
-#endif
-      )
+    : foleys::MagicProcessor(
+          juce::AudioProcessor::BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      treeState_(*this, nullptr, ProjectInfo::projectName, createParameterLayout()), stringEnsembleEngine_(treeState_)
 {
-    constexpr uint8_t NUM_VOICE = 4;
-    for (uint8_t i = 1; i <= NUM_VOICE; ++i)
-    {
-        synth_.addVoice(new BowedStringVoice(i));
-        synth_.addSound(new BowedStringSound(i));
-    }
+    FOLEYS_SET_SOURCE_PATH(__FILE__);
 }
 
 BowedVstPluginAudioProcessor::~BowedVstPluginAudioProcessor()
@@ -95,8 +92,6 @@ void BowedVstPluginAudioProcessor::changeProgramName(int index, const juce::Stri
 void BowedVstPluginAudioProcessor::prepareToPlay(double sampleRate, int /* samplesPerBlock */)
 {
     stringEnsembleEngine_.Init(static_cast<float>(sampleRate));
-    synth_.setCurrentPlaybackSampleRate(sampleRate);
-    midiCollector_.reset(sampleRate);
 }
 
 void BowedVstPluginAudioProcessor::releaseResources()
@@ -164,43 +159,6 @@ void BowedVstPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         currentSampleIdx += samplesToNextMidiMessage;
         numSamples -= samplesToNextMidiMessage;
     }
-
-    // synth_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
-
-    // midiCollector_.removeNextBlockOfMessages(midiMessages, buffer.get.numSamples);
-
-    // juce::AudioSourceChannelInfo bufferToFill;
-    // bufferToFill.startSample = 0;
-    // bufferToFill.buffer = &buffer;
-    // bufferToFill.numSamples = buffer.getNumSamples();
-    // synthAudioSource_.getNextAudioBlock(bufferToFill);
-}
-
-//==============================================================================
-bool BowedVstPluginAudioProcessor::hasEditor() const
-{
-    return true; // (change this to false if you choose to not supply an editor)
-}
-
-juce::AudioProcessorEditor* BowedVstPluginAudioProcessor::createEditor()
-{
-    return new BowedVstPluginAudioProcessorEditor(*this);
-}
-
-//==============================================================================
-void BowedVstPluginAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
-{
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused(destData);
-}
-
-void BowedVstPluginAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
-{
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused(data, sizeInBytes);
 }
 
 //==============================================================================

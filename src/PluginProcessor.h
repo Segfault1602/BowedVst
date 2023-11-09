@@ -5,7 +5,7 @@
 #include "StringEnsembleEngine.h"
 
 //==============================================================================
-class BowedVstPluginAudioProcessor : public juce::AudioProcessor
+class BowedVstPluginAudioProcessor : public foleys::MagicProcessor
 {
   public:
     //==============================================================================
@@ -22,10 +22,6 @@ class BowedVstPluginAudioProcessor : public juce::AudioProcessor
     using AudioProcessor::processBlock;
 
     //==============================================================================
-    juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
-
-    //==============================================================================
     const juce::String getName() const override;
 
     bool acceptsMidi() const override;
@@ -40,14 +36,8 @@ class BowedVstPluginAudioProcessor : public juce::AudioProcessor
     const juce::String getProgramName(int index) override;
     void changeProgramName(int index, const juce::String& newName) override;
 
-    //==============================================================================
-    void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
-
   private:
-    juce::MidiKeyboardState keyboardState_;
-    juce::Synthesiser synth_;
-    juce::MidiMessageCollector midiCollector_;
+    juce::AudioProcessorValueTreeState treeState_;
 
     StringEnsembleEngine stringEnsembleEngine_;
     //==============================================================================

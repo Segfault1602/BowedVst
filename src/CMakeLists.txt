@@ -74,8 +74,10 @@ juce_generate_juce_header(BowedVstPlugin)
 # which should normally be PRIVATE. Finally, we supply a list of source files
 # that will be built into the target. This is a standard CMake command.
 
-target_sources(BowedVstPlugin PRIVATE BowedStringVoice.cpp PluginEditor.cpp
-                                      PluginProcessor.cpp StringEnsembleEngine.cpp)
+target_sources(BowedVstPlugin
+PRIVATE
+PluginProcessor.cpp
+StringEnsembleEngine.cpp)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target.
 # In a Projucer project, these might be passed in the 'Preprocessor Definitions'
@@ -116,7 +118,11 @@ target_compile_definitions(
 
 target_link_libraries(
   BowedVstPlugin
-  PRIVATE dsp juce::juce_audio_utils juce::juce_recommended_config_flags
-          juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
+  PRIVATE
+  foleys_gui_magic
+  dsp juce::juce_audio_utils
+  juce::juce_recommended_config_flags
+  juce::juce_recommended_lto_flags
+  juce::juce_recommended_warning_flags)
 
 target_include_directories(BowedVstPlugin PRIVATE ../externals/libdsp/include)

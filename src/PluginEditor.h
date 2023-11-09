@@ -3,10 +3,10 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-class BowedVstPluginAudioProcessorEditor : public juce::AudioProcessorEditor
+class BowedVstPluginAudioProcessorEditor : public foleys::MagicProcessor
 {
   public:
-    explicit BowedVstPluginAudioProcessorEditor(BowedVstPluginAudioProcessor&);
+    explicit BowedVstPluginAudioProcessorEditor();
     ~BowedVstPluginAudioProcessorEditor() override;
 
     //==============================================================================

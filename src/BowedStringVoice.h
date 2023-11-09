@@ -47,7 +47,7 @@ class BowedStringVoice : public juce::SynthesiserVoice
 
   private:
     uint8_t midi_channel_ = 0;
-    dsp::BowedString bowedString_;
+    sfdsp::BowedString bowedString_;
     bool noteOn_ = false;
 
     float next_freq_ = 0.f;

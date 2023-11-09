@@ -52,7 +52,7 @@ void BowedStringVoice::startNote(int midiNoteNumber, float velocity, juce::Synth
         (static_cast<float>(currentPitchWheelPosition) - CENTER_PITCH_BEND_VALUE) / MAX_PITCH_BEND_VALUE;
     normalizePitchWheelValue *= PITCH_BEND_RANGE;
 
-    float freq = dsp::MidiToFreq(static_cast<float>(midiNoteNumber) + normalizePitchWheelValue);
+    float freq = sfdsp::MidiToFreq(static_cast<float>(midiNoteNumber) + normalizePitchWheelValue);
     next_freq_ = freq;
     bowedString_.SetFrequency(freq);
     bowedString_.SetVelocity(0.f);
@@ -76,7 +76,7 @@ void BowedStringVoice::pitchWheelMoved(int newPitchWheelValue)
         (static_cast<float>(newPitchWheelValue) - CENTER_PITCH_BEND_VALUE) / MAX_PITCH_BEND_VALUE;
     normalizePitchWheelValue *= PITCH_BEND_RANGE;
 
-    float freq = dsp::MidiToFreq(static_cast<float>(getCurrentlyPlayingNote()) + normalizePitchWheelValue);
+    float freq = sfdsp::MidiToFreq(static_cast<float>(getCurrentlyPlayingNote()) + normalizePitchWheelValue);
     next_freq_ = freq;
     // bowedString_.SetFrequency(freq);
 }
