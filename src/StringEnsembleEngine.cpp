@@ -35,7 +35,7 @@ void StringEnsembleEngine::Init(float samplerate)
 
     for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
     {
-        stringData_[i].frequency = stringEnsemble_.GetFrequency(i);
+        stringData_[i].frequency = stringEnsemble_[i].GetFrequency();
         stringData_[i].pitchWheelValue = 0.f;
         stringData_[i].forceFilter.SetDecayFilter(-60, 10, samplerate);
         stringData_[i].velocityFilter.SetDecayFilter(-60, 10, samplerate);
@@ -45,28 +45,22 @@ void StringEnsembleEngine::Init(float samplerate)
 
 void StringEnsembleEngine::Tick(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
-    while (--numSamples >= 0)
+    for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
     {
-        for (uint8_t i = 0; i < sfdsp::kStringCount; ++i)
-        {
-            auto& s = stringData_[i];
-            float pitchBend = s.pitchFilter.Tick(s.pitchWheelValue);
-            float freq = sfdsp::MidiToFreq(static_cast<float>(s.lastNote) + pitchBend);
-            stringEnsemble_.SetFrequency(i, freq);
+        auto& s = stringData_[i];
+        // float pitchBend = s.pitchFilter.Tick(s.pitchWheelValue);
+        float freq = sfdsp::MidiToFreq(static_cast<float>(s.lastNote) + s.pitchWheelValue);
+        stringEnsemble_[i].SetFrequency(freq);
 
-            float vel = s.velocityFilter.Tick(s.velocityValue);
-            stringEnsemble_.SetVelocity(i, vel * maxVelocity_);
+        stringEnsemble_[i].SetVelocity(s.velocityValue * maxVelocity_);
 
-            float force = s.forceFilter.Tick(s.forceValue);
-            stringEnsemble_.SetForce(i, force);
-        }
-        float currentSample = stringEnsemble_.Tick();
-
-        for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
-            outputBuffer.addSample(i, startSample, currentSample);
-
-        ++startSample;
+        stringEnsemble_[i].SetForce(s.forceValue);
     }
+    stringEnsemble_.ProcessBlock(outputBuffer.getWritePointer(0) + startSample, static_cast<size_t>(numSamples));
+
+    // Copy the output to the other channels
+    for (auto i = outputBuffer.getNumChannels(); --i > 0;)
+        outputBuffer.addFrom(i, startSample, outputBuffer, 0, startSample, numSamples);
 }
 
 void StringEnsembleEngine::HandleMidiMessage(const juce::MidiMessage& m)
@@ -129,7 +123,32 @@ void StringEnsembleEngine::HandleMidiMessage(const juce::MidiMessage& m)
         }
         else if (ccNum == 3)
         {
-            stringEnsemble_.SetBridgeTransmission(normalizedValue);
+            stringEnsemble_.SetParameter(sfdsp::StringEnsemble::ParamId::BridgeTransmission, normalizedValue);
+        }
+        else if (ccNum == 7)
+        {
+            stringEnsemble_.SetParameter(sfdsp::StringEnsemble::ParamId::BridgeTransmissionFilterCutoff,
+                                         normalizedValue);
+        }
+        else if (ccNum >= 12 && ccNum <= 15)
+        {
+            uint8_t stringNum = ccNum - 12;
+            stringEnsemble_[stringNum].SetParameter(sfdsp::BowedString::ParamId::BridgeFilterCutoff, normalizedValue);
+        }
+        else if (ccNum >= 16 && ccNum <= 19)
+        {
+            uint8_t stringNum = ccNum - 16;
+            stringEnsemble_[stringNum].SetParameter(sfdsp::BowedString::ParamId::NutGain, normalizedValue);
+        }
+        else if (ccNum >= 20 && ccNum <= 23)
+        {
+            uint8_t stringNum = ccNum - 20;
+            stringEnsemble_[stringNum].SetParameter(sfdsp::BowedString::ParamId::FingerPressure, normalizedValue);
+        }
+        else if (ccNum >= 24 && ccNum <= 27)
+        {
+            uint8_t stringNum = ccNum - 24;
+            stringEnsemble_[stringNum].SetParameter(sfdsp::BowedString::ParamId::TuningAdjustment, normalizedValue);
         }
         else
         {
