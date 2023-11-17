@@ -52,9 +52,9 @@ void StringEnsembleEngine::Tick(juce::AudioBuffer<float>& outputBuffer, int star
         float freq = sfdsp::MidiToFreq(static_cast<float>(s.lastNote) + s.pitchWheelValue);
         stringEnsemble_[i].SetFrequency(freq);
 
-        stringEnsemble_[i].SetVelocity(s.velocityValue * maxVelocity_);
+        stringEnsemble_[i].SetParameter(sfdsp::BowedString::ParamId::Velocity, s.velocityValue * maxVelocity_);
 
-        stringEnsemble_[i].SetForce(s.forceValue);
+        stringEnsemble_[i].SetParameter(sfdsp::BowedString::ParamId::Force, s.forceValue);
     }
     stringEnsemble_.ProcessBlock(outputBuffer.getWritePointer(0) + startSample, static_cast<size_t>(numSamples));
 
@@ -86,7 +86,7 @@ void StringEnsembleEngine::HandleMidiMessage(const juce::MidiMessage& m)
     }
     else if (m.isNoteOff())
     {
-        stringEnsemble_.FingerOff(channel - 1);
+        stringEnsemble_[channel - 1].SetParameter(sfdsp::BowedString::ParamId::Force, 0.0f);
         stringData.forceValue = 0.0f;
         stringData.velocityValue = 0.0f;
         stringData.pitchWheelValue = 0.f;

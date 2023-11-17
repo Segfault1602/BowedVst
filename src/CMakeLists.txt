@@ -34,19 +34,30 @@ juce_add_plugin(
   # is different to the project version ICON_BIG ... # ICON_* arguments specify
   # a path to an image file to use as an icon for the Standalone ICON_SMALL ...
   segfaultdsp # Specify the name of the plugin's author
-  COMPANY_NAME SegfaultDSP
-  IS_SYNTH TRUE
-  NEEDS_MIDI_INPUT TRUE
-  NEEDS_MIDI_OUTPUT FALSE
-  IS_MIDI_EFFECT FALSE
+  COMPANY_NAME
+  SegfaultDSP
+  IS_SYNTH
+  TRUE
+  NEEDS_MIDI_INPUT
+  TRUE
+  NEEDS_MIDI_OUTPUT
+  FALSE
+  IS_MIDI_EFFECT
+  FALSE
   # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard
   # focus?
-  COPY_PLUGIN_AFTER_BUILD FALSE # Should the plugin be installed to a default location after building?
-  PLUGIN_MANUFACTURER_CODE Alex
-  PLUGIN_CODE Dem0
-  FORMATS AU VST3
+  COPY_PLUGIN_AFTER_BUILD
+  FALSE # Should the plugin be installed to a default location after building?
+  PLUGIN_MANUFACTURER_CODE
+  Alex
+  PLUGIN_CODE
+  Dem0
+  FORMATS
+  AU
+  VST3
   Standalone
-  PRODUCT_NAME  "BowedVst") # The name of the final executable, which can differ from the
+  PRODUCT_NAME
+  "BowedVst") # The name of the final executable, which can differ from the
 # target name
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target,
@@ -63,8 +74,10 @@ juce_generate_juce_header(BowedVstPlugin)
 # which should normally be PRIVATE. Finally, we supply a list of source files
 # that will be built into the target. This is a standard CMake command.
 
-target_sources(BowedVstPlugin PRIVATE BowedStringVoice.cpp PluginEditor.cpp
-                                      PluginProcessor.cpp)
+target_sources(BowedVstPlugin
+PRIVATE
+PluginProcessor.cpp
+StringEnsembleEngine.cpp)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target.
 # In a Projucer project, these might be passed in the 'Preprocessor Definitions'
@@ -83,7 +96,8 @@ target_compile_definitions(
                             # to the `juce_add_plugin` call
          JUCE_USE_CURL=0 # If you remove this, add `NEEDS_CURL TRUE` to the
                          # `juce_add_plugin` call
-         JUCE_VST3_CAN_REPLACE_VST2=0)
+         JUCE_VST3_CAN_REPLACE_VST2=0
+         JUCE_SILENCE_XCODE_15_LINKER_WARNING=1)
 
 # If your target needs extra binary assets, you can add them here. The first
 # argument is the name of a new static library target that will include all the
@@ -105,7 +119,11 @@ target_compile_definitions(
 
 target_link_libraries(
   BowedVstPlugin
-  PRIVATE dsp juce::juce_audio_utils juce::juce_recommended_config_flags
-          juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
+  PRIVATE
+  foleys_gui_magic
+  dsp juce::juce_audio_utils
+  juce::juce_recommended_config_flags
+  juce::juce_recommended_lto_flags
+  juce::juce_recommended_warning_flags)
 
 target_include_directories(BowedVstPlugin PRIVATE ../externals/libdsp/include)
